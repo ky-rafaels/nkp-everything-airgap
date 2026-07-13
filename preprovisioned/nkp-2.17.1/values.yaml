@@ -48,14 +48,13 @@ cluster:
     # material here - supply via --set-file, -f a secrets values file, or --set.
     privateKeyBase64: ""
 
-# After installation you will then need to apply metallb config to complete deployment
 # # MetalLB IPAddressPool/L2Advertisement applied to the workload cluster (templates/metallb.yaml).
-# metallb:
-#   namespace: metallb-system
-#   addressPool:
-#     name: default
-#     addresses:
-#       - 192.168.1.15-192.168.1.18
-#   l2Advertisement:
-#     name: default
+metallb:
+  namespace: metallb-system
+  addressPool:
+    name: default
+    addresses:
+      - 192.168.1.15-192.168.1.18
+  l2Advertisement:
+    name: default
 
