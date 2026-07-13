@@ -13,6 +13,11 @@ cluster:
     podCIDR: 192.168.0.0/16
     serviceCIDR: 10.96.0.0/12
 
+  # When true, removes the control-plane NoSchedule taint (KubeadmControlPlane
+  # init/joinConfiguration nodeRegistration.taints) so workloads can schedule onto the
+  # control-plane node(s) - intended for single-node clusters with no separate worker pool.
+  singleNode: false
+
   # The API endpoint (Cluster.spec.controlPlaneEndpoint) clients use to reach the cluster.
   controlPlaneEndpoint:
     host: "192.168.1.47"

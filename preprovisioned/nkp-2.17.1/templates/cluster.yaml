@@ -411,6 +411,9 @@ spec:
     initConfiguration:
       localAPIEndpoint: {}
       nodeRegistration:
+{{- if .Values.cluster.singleNode }}
+        taints: []
+{{- end }}
         criSocket: unix:///run/containerd/containerd.sock
         ignorePreflightErrors:
         - SystemVerification
@@ -421,6 +424,9 @@ spec:
     joinConfiguration:
       discovery: {}
       nodeRegistration:
+{{- if .Values.cluster.singleNode }}
+        taints: []
+{{- end }}
         criSocket: unix:///run/containerd/containerd.sock
         ignorePreflightErrors:
         - SystemVerification
