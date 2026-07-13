@@ -2,6 +2,10 @@
 
 The goal of this repo is to provide a standardized helm chart for the installation of NKP workload clusters in an airgapped environment on various infrastructure. This chart is designed to provide an production forward methodology for installing and managing NKP workload clusters at scale.
 
+# How is this different?
+
+When using the nkp commandline tool to install clusters or from the management cluster UI/UX, the process for cluster installation is repetive, error prone, and does not capture configuration state in git. Due to this there is no historical reference point, auditing or process workflow for instituting cluster changes. The helm chart approach provides flexibility and consistency to deploy and manage your workload clusters at scale.
+
 ## Dependencies
 
 - kubectl
