@@ -1,10 +1,14 @@
-# Prereqs
+# Purpose
+
+The goal of this repo is to provide a standardized helm chart for the installation of NKP workload clusters in an airgapped environment on various infrastructure. This chart is designed to provide an production forward methodology for installing and managing NKP workload clusters at scale.
+
+## Dependencies
 
 - kubectl
 - helm
 - docker
 
-# Installing the preprovisioned NKP cluster chart
+## Installing the preprovisioned NKP cluster chart
 
 The chart in [preprovisioned/nkp-2.17.1](preprovisioned/nkp-2.17.1) renders the Cluster API
 resources (Cluster, KubeadmControlPlane, PreprovisionedInventory, MachineDeployment, addon
