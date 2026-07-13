@@ -48,6 +48,13 @@ cluster:
     # material here - supply via --set-file, -f a secrets values file, or --set.
     privateKeyBase64: ""
 
+  etcd:
+    # base64-encoded 32-byte AES-CBC key used in the etcd-encryption-config Secret's
+    # EncryptionConfig (secrets/configmaps at rest). Generate with:
+    #   head -c 32 /dev/urandom | base64
+    # Do not commit real key material here - supply via -f a secrets values file or --set.
+    encryptionKey: ""
+
   # Containerd registry mirror used by the control-plane and md-0 containerd-configuration
   # Secrets (templates/secrets.yaml) to redirect image pulls through an airgapped mirror.
   containerd:

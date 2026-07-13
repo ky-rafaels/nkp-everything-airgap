@@ -62,6 +62,25 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+etcd EncryptionConfig used by the etcd-encryption-config Secret (templates/secrets.yaml),
+consumed by KubeadmControlPlane via encryption-provider-config (templates/cluster.yaml).
+*/}}
+{{- define "nkp-2.17.1.etcdEncryptionConfig" -}}
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+      - configmaps
+    providers:
+      - aescbc:
+          keys:
+            - name: key
+              secret: {{ required "cluster.etcd.encryptionKey is required: generate a 32-byte AES-CBC key with `head -c 32 /dev/urandom | base64` and supply it via -f/--set" .Values.cluster.etcd.encryptionKey }}
+      - identity: {}
+{{- end }}
+
+{{/*
 Containerd registry mirror config.toml used by the control-plane and worker
 containerd-configuration Secrets (templates/secrets.yaml).
 */}}
