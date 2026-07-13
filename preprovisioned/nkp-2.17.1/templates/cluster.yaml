@@ -331,6 +331,31 @@ spec:
           grpc_histogram = false
       path: /etc/containerd/konvoy-conf.d/konvoy-metrics.toml
       permissions: "0644"
+    - contentFrom:
+        secret:
+          key: mirror
+          name: {{ .Values.cluster.name }}-control-plane-containerd-configuration
+      path: /etc/containerd/konvoy-conf.d/konvoy-mirror.toml
+      permissions: "0600"
+    - content: |
+        -----BEGIN CERTIFICATE-----
+        MIIBcDCCARWgAwIBAgIRAP71jOPQISJzrgBZ5bfkPTgwCgYIKoZIzj0EAwIwFzEV
+        MBMGA1UEAxMMa29tbWFuZGVyLWNhMB4XDTI2MDMyNDEzNTMwOVoXDTM2MDMyMTEz
+        NTMwOVowFzEVMBMGA1UEAxMMa29tbWFuZGVyLWNhMFkwEwYHKoZIzj0CAQYIKoZI
+        zj0DAQcDQgAE2srQhzqIYEXuLKuZ+fghBC6mnY3L+MTTXVZOs+pXZFp6P8tY6ftX
+        vmXtPhUFl7zjJoliTOPSNHDx3IUz3VsRJaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8G
+        A1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFJzCQMrNcpHOts3SMpMr+T0vDpkGMAoG
+        CCqGSM49BAMCA0kAMEYCIQDL6ifWRJ2IWzj1qGj/SzT2pNBqac2uLv1VbFaR5SqO
+        8gIhANVj2uUmlIuRzPOuvel9HQ9osfSOjFpryJF9U89uJYAC
+        -----END CERTIFICATE-----
+      path: /etc/containerd/ca-konvoy-mirror.crt
+      permissions: "0644"
+    - content: |
+        [metrics]
+          address = "0.0.0.0:1338"
+          grpc_histogram = false
+      path: /etc/containerd/konvoy-conf.d/konvoy-metrics.toml
+      permissions: "0644"
     - content: |
         #!/bin/bash
         set -euo pipefail
