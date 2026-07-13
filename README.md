@@ -3,7 +3,6 @@
 - kubectl
 - helm
 - docker
-- nkp airgap bundle
 
 # Installing the preprovisioned NKP cluster chart
 
