@@ -6,7 +6,6 @@ The goal of this repo is to provide a standardized helm chart for the installati
 
 - kubectl
 - helm
-- docker
 
 ## Installing the preprovisioned NKP cluster chart
 
