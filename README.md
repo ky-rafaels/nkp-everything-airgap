@@ -6,6 +6,11 @@ The goal of this repo is to provide a standardized helm chart for the installati
 
 When using the nkp commandline tool to install clusters or from the management cluster UI/UX, the process for cluster installation is repetive, error prone, and does not capture configuration state in git. Due to this there is no historical reference point, auditing or process workflow for instituting cluster changes. The helm chart approach provides flexibility and consistency to deploy and manage your workload clusters at scale.
 
+Notable improvements:
+- Ability to templatize coredns for custom Corefile configurations
+- Ability to apply metallb IPAddressPool and L2Advertisement directly to the workload cluster so as to not have this happen post cluster installation
+- Cluster manifests split into separate easily digestable templates
+
 ## Dependencies
 
 - kubectl
