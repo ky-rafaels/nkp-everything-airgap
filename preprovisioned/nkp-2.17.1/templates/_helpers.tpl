@@ -60,3 +60,23 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Containerd registry mirror config.toml used by the control-plane and worker
+containerd-configuration Secrets (templates/secrets.yaml).
+*/}}
+{{- define "nkp-2.17.1.containerdMirrorConfig" -}}
+# override all the mirrors configuration
+# Containerd automatically appends mirrors."docker.io"
+# need to explicitly override mirrors."docker.io" with the mirror to pull images from dockerhub
+[plugins."io.containerd.grpc.v1.cri".registry]
+  # config path and mirrors cannot be both set
+  config_path = ""
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+    endpoint = ["https://{{ .Values.cluster.containerd.registryMirror.host }}","https://registry-1.docker.io"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."*"]
+    endpoint = ["https://{{ .Values.cluster.containerd.registryMirror.host }}"]
+[plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .Values.cluster.containerd.registryMirror.host }}".tls]
+  ca_file = "{{ .Values.cluster.containerd.registryMirror.caFile }}"
+{{- end }}

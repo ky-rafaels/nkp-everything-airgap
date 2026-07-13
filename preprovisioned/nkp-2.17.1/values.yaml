@@ -48,6 +48,16 @@ cluster:
     # material here - supply via --set-file, -f a secrets values file, or --set.
     privateKeyBase64: ""
 
+  # Containerd registry mirror used by the control-plane and md-0 containerd-configuration
+  # Secrets (templates/secrets.yaml) to redirect image pulls through an airgapped mirror.
+  containerd:
+    registryMirror:
+      # Bare hostname (no scheme) of the airgapped registry mirror. Used both as the
+      # docker.io/catch-all mirror endpoint and as the containerd registry TLS config key.
+      host: registry.internal.example.com
+      # Path (already present on hosts) to the CA cert containerd uses to trust the mirror.
+      caFile: /etc/containerd/ca-konvoy-mirror.crt
+
 # # MetalLB IPAddressPool/L2Advertisement applied to the workload cluster (templates/metallb.yaml).
 metallb:
   namespace: metallb-system
