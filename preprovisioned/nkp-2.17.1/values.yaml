@@ -67,8 +67,23 @@ cluster:
       # Bare hostname (no scheme) of the airgapped registry mirror. Used both as the
       # docker.io/catch-all mirror endpoint and as the containerd registry TLS config key.
       host: registry.internal.example.com
-      # Path (already present on hosts) to the CA cert containerd uses to trust the mirror.
+      # Path containerd is configured to read the CA cert from on-host (written to this path
+      # via the file below - it does not need to pre-exist on the hosts).
       caFile: /etc/containerd/ca-konvoy-mirror.crt
+      # Raw PEM contents of the CA cert used to trust the registry mirror above, written to
+      # caFile on every control-plane host. Do not commit a real org's CA here - supply via
+      # -f a secrets values file or --set-file cluster.containerd.registryMirror.caCert=<path>.
+      caCert: |
+        -----BEGIN CERTIFICATE-----
+        MIIBcDCCARWgAwIBAgIRAP71jOPQISJzrgBZ5bfkPTgwCgYIKoZIzj0EAwIwFzEV
+        MBMGA1UEAxMMa29tbWFuZGVyLWNhMB4XDTI2MDMyNDEzNTMwOVoXDTM2MDMyMTEz
+        NTMwOVowFzEVMBMGA1UEAxMMa29tbWFuZGVyLWNhMFkwEwYHKoZIzj0CAQYIKoZI
+        zj0DAQcDQgAE2srQhzqIYEXuLKuZ+fghBC6mnY3L+MTTXVZOs+pXZFp6P8tY6ftX
+        vmXtPhUFl7zjJoliTOPSNHDx3IUz3VsRJaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8G
+        A1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFJzCQMrNcpHOts3SMpMr+T0vDpkGMAoG
+        CCqGSM49BAMCA0kAMEYCIQDL6ifWRJ2IWzj1qGj/SzT2pNBqac2uLv1VbFaR5SqO
+        8gIhANVj2uUmlIuRzPOuvel9HQ9osfSOjFpryJF9U89uJYAC
+        -----END CERTIFICATE-----
 
 # # MetalLB IPAddressPool/L2Advertisement applied to the workload cluster (templates/metallb.yaml).
 metallb:
