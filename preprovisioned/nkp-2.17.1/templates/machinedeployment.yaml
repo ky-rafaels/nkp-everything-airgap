@@ -1,0 +1,207 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.cluster.name }}
+  name: {{ .Values.cluster.name }}-md-0
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  clusterName: {{ .Values.cluster.name }}
+  minReadySeconds: 0
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.cluster.workers.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ .Values.cluster.name }}
+      cluster.x-k8s.io/deployment-name: {{ .Values.cluster.name }}-md-0
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: {{ .Values.cluster.name }}
+        cluster.x-k8s.io/deployment-name: {{ .Values.cluster.name }}-md-0
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: {{ .Values.cluster.name }}-md-0
+          namespace: {{ .Values.cluster.namespace }}
+      clusterName: {{ .Values.cluster.name }}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.konvoy.d2iq.io/v1alpha1
+        kind: PreprovisionedMachineTemplate
+        name: {{ .Values.cluster.name }}-md-0
+        namespace: {{ .Values.cluster.namespace }}
+      version: v1.34.3
+---
+apiVersion: infrastructure.cluster.konvoy.d2iq.io/v1alpha1
+kind: PreprovisionedMachineTemplate
+metadata:
+  name: {{ .Values.cluster.name }}-md-0
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  template:
+    spec:
+      inventoryRef:
+        name: {{ .Values.cluster.name }}-md-0
+        namespace: {{ .Values.cluster.namespace }}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: {{ .Values.cluster.name }}-md-0
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  template:
+    metadata: {}
+    spec:
+      files:
+      - content: |
+          #!/bin/bash
+          # CAPI does not expose an API to modify KubeProxyConfiguration. For the upstream issue,
+          # see https://github.com/kubernetes-sigs/cluster-api/issues/4512.
+          #
+          # This script is expected to be run before kubeadm itself, using a preKubeadmCommand.
+          #
+          # To modify the KubeProxyConfiguration, we append it to the kubeadm configuration.
+          # The file is expected to be a path that depends on the Bootstrap Type and the Node Type.
+
+          possible_files=()                                       # Bootstrap Type | Node Type
+          possible_files+=(/run/kubeadm/kubeadm.yaml)             # cloud-init     | control-plane
+          possible_files+=(/run/kubeadm/kubeadm-join-config.yaml) # cloud-init     | node
+          possible_files+=(/etc/kubeadm.yml)                      # ignition       | node
+
+          modified_files=()
+          for config in "${possible_files[@]}"; do
+            if [ -f "$config" ]; then
+              cat <<EOF >>"$config"
+          ---
+          kind: KubeProxyConfiguration
+          apiVersion: kubeproxy.config.k8s.io/v1alpha1
+          metricsBindAddress: "0.0.0.0:10249"
+          EOF
+              modified_files+=("$config")
+            fi
+          done
+
+          printf >&2 "Appended KubeadmProxyConfiguration to: %s\n" "${modified_files[@]}"
+        path: /etc/konvoy/append-kube-proxy-configuration.sh
+        permissions: "0700"
+      - content: |
+          [metrics]
+            address = "0.0.0.0:1338"
+            grpc_histogram = false
+        path: /etc/containerd/konvoy-conf.d/konvoy-metrics.toml
+        permissions: "0644"
+      - content: |
+          #!/bin/bash
+          set -euo pipefail
+          IFS=$'\n\t'
+
+          declare -r TOML_MERGE_IMAGE="ghcr.io/mesosphere/toml-merge:v0.2.0"
+
+          if ! ctr --namespace k8s.io images check "name==${TOML_MERGE_IMAGE}" | grep "${TOML_MERGE_IMAGE}" >/dev/null; then
+            ctr --namespace k8s.io images pull "${TOML_MERGE_IMAGE}"
+          fi
+
+          cleanup() {
+            ctr images unmount "${tmp_ctr_mount_dir}" || true
+          }
+
+          trap 'cleanup' EXIT
+
+          readonly tmp_ctr_mount_dir="$(mktemp -d)"
+
+          ctr --namespace k8s.io images mount "${TOML_MERGE_IMAGE}" "${tmp_ctr_mount_dir}"
+          "${tmp_ctr_mount_dir}/usr/local/bin/toml-merge" -i --patch-file "/etc/containerd/konvoy-conf.d/*.toml" /etc/containerd/config.toml
+        path: /etc/konvoy/containerd-apply-patches.sh
+        permissions: "0700"
+      - content: |
+          #!/bin/bash
+          systemctl restart containerd
+
+          if ! command -v crictl; then
+            echo "Command crictl is not available, will not wait for Containerd to be running"
+            exit
+          fi
+
+          SECONDS=0
+          until crictl info; do
+            if ((SECONDS > 60)); then
+              echo "Containerd is not running. Giving up..."
+              exit 1
+            fi
+            echo "Containerd is not running yet. Waiting..."
+            sleep 5
+          done
+        path: /etc/konvoy/restart-containerd-and-wait.sh
+        permissions: "0700"
+      - content: |
+          #!/bin/bash
+          set -euo pipefail
+          IFS=$'\n\t'
+
+          declare -r CREDENTIAL_PROVIDER_IMAGE="ghcr.io/mesosphere/dynamic-credential-provider:v0.5.3"
+
+          if ! ctr --namespace k8s.io images check "name==${CREDENTIAL_PROVIDER_IMAGE}" | grep "${CREDENTIAL_PROVIDER_IMAGE}" >/dev/null; then
+            ctr --namespace k8s.io images pull "${CREDENTIAL_PROVIDER_IMAGE}"
+          fi
+
+          cleanup() {
+            ctr images unmount "${tmp_ctr_mount_dir}" || true
+          }
+
+          trap 'cleanup' EXIT
+
+          readonly tmp_ctr_mount_dir="$(mktemp -d)"
+
+          export CREDENTIAL_PROVIDER_SOURCE_DIR="${tmp_ctr_mount_dir}/opt/image-credential-provider/bin/"
+          export CREDENTIAL_PROVIDER_TARGET_DIR="/etc/kubernetes/image-credential-provider/"
+
+          ctr --namespace k8s.io images mount "${CREDENTIAL_PROVIDER_IMAGE}" "${tmp_ctr_mount_dir}"
+          "${tmp_ctr_mount_dir}/opt/image-credential-provider/bin/dynamic-credential-provider" install
+        path: /etc/konvoy/install-kubelet-credential-providers.sh
+        permissions: "0700"
+      format: cloud-config
+      joinConfiguration:
+        discovery: {}
+        nodeRegistration:
+          criSocket: unix:///run/containerd/containerd.sock
+          ignorePreflightErrors:
+          - SystemVerification
+          imagePullPolicy: IfNotPresent
+          kubeletExtraArgs:
+            cloud-provider: ""
+            provider-id: '{{ .ProviderID }}'
+      preKubeadmCommands:
+      - /etc/konvoy/append-kube-proxy-configuration.sh
+      - /etc/konvoy/install-kubelet-credential-providers.sh
+      - /etc/konvoy/containerd-apply-patches.sh
+      - systemctl daemon-reload
+      - /etc/konvoy/restart-containerd-and-wait.sh
+---
+apiVersion: infrastructure.cluster.konvoy.d2iq.io/v1alpha1
+kind: PreprovisionedInventory
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.cluster.name }}
+    clusterctl.cluster.x-k8s.io/move: ""
+  name: {{ .Values.cluster.name }}-md-0
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  hosts:
+{{- range .Values.cluster.workers.hosts }}
+  - address: {{ .address | quote }}
+{{- end }}
+  sshConfig:
+    port: 22
+    privateKeyRef:
+      name: {{ .Values.cluster.name }}-ssh-key
+      namespace: {{ .Values.cluster.namespace }}
+    user: {{ .Values.cluster.ssh.user }}

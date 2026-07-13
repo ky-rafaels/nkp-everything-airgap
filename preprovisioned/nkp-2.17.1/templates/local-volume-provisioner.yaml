@@ -1,0 +1,145 @@
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  labels:
+    konvoy.d2iq.io/cluster-name: {{ .Values.cluster.name }}
+  name: local-volume-provisioner-{{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  clusterSelector:
+    matchLabels:
+      konvoy.d2iq.io/cluster-name: {{ .Values.cluster.name }}
+      konvoy.d2iq.io/csi: local-volume-provisioner
+      konvoy.d2iq.io/provider: preprovisioned
+  resources:
+  - kind: ConfigMap
+    name: local-volume-provisioner-{{ .Values.cluster.name }}
+  strategy: Reconcile
+---
+apiVersion: v1
+data:
+  local-volume-provisioner.yaml: |
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      annotations:
+        storageclass.kubernetes.io/is-default-class: "true"
+      name: localvolumeprovisioner
+    provisioner: kubernetes.io/no-provisioner
+    reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer
+    ---
+    apiVersion: v1
+    data:
+      storageClassMap: "localvolumeprovisioner:\n   hostDir: /mnt/disks\n   mountDir:
+        \ /mnt/disks \n   blockCleanerCommand:\n     - \"/scripts/shred.sh\"\n     - \"2\"\n
+        \  volumeMode: Filesystem\n   accessMode: ReadWriteOnce\n   fsType: ext4\n   namePattern:
+        \"*\"\n"
+    kind: ConfigMap
+    metadata:
+      name: local-provisioner-config
+      namespace: kube-system
+    ---
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels:
+        app: local-volume-provisioner
+      name: local-volume-provisioner
+      namespace: kube-system
+    spec:
+      selector:
+        matchLabels:
+          app: local-volume-provisioner
+      template:
+        metadata:
+          labels:
+            app: local-volume-provisioner
+        spec:
+          containers:
+          - env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.8.0
+            imagePullPolicy: IfNotPresent
+            name: provisioner
+            securityContext:
+              privileged: true
+            volumeMounts:
+            - mountPath: /etc/provisioner/config
+              name: provisioner-config
+              readOnly: true
+            - mountPath: /mnt/disks
+              mountPropagation: HostToContainer
+              name: disks
+            - mountPath: /dev
+              name: provisioner-dev
+          priorityClassName: system-node-critical
+          serviceAccountName: local-storage-admin
+          tolerations:
+          - key: CriticalAddonsOnly
+            operator: Exists
+          - effect: NoExecute
+            operator: Exists
+          - effect: NoSchedule
+            operator: Exists
+          volumes:
+          - configMap:
+              name: local-provisioner-config
+            name: provisioner-config
+          - hostPath:
+              path: /mnt/disks
+            name: disks
+          - hostPath:
+              path: /dev
+            name: provisioner-dev
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: local-storage-admin
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: local-storage-provisioner-pv-binding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:persistent-volume-provisioner
+    subjects:
+    - kind: ServiceAccount
+      name: local-storage-admin
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: local-storage-provisioner-node-clusterrole
+    rules:
+    - apiGroups:
+      - ""
+      resources:
+      - nodes
+      verbs:
+      - get
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: local-storage-provisioner-node-binding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: local-storage-provisioner-node-clusterrole
+    subjects:
+    - kind: ServiceAccount
+      name: local-storage-admin
+      namespace: kube-system
+kind: ConfigMap
+metadata:
+  name: local-volume-provisioner-{{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
