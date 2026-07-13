@@ -1,0 +1,60 @@
+# Default values for nkp-2.17.1.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# NKP preprovisioned workload cluster configuration (templates/cluster.yaml).
+cluster:
+  # Cluster name, used to derive the names of every generated resource.
+  name: nkp-workload
+  # Namespace on the management cluster the CAPI resources are created in.
+  namespace: edge-clusters
+
+  network:
+    podCIDR: 192.168.0.0/16
+    serviceCIDR: 10.96.0.0/12
+
+  # The API endpoint (Cluster.spec.controlPlaneEndpoint) clients use to reach the cluster.
+  controlPlaneEndpoint:
+    host: "192.168.1.47"
+    port: 6443
+
+  controlPlane:
+    # KubeadmControlPlane replica count for the nkp-workload-3-control-plane control plane.
+    replicas: 3
+    # PreprovisionedCluster.spec.controlPlaneEndpoint.host - the control-plane node's address
+    # kube-vip uses before the virtual IP takes over.
+    endpointHost: "192.168.1.48"
+    # Interface kube-vip uses to advertise the control-plane virtual IP.
+    virtualIPInterface: eno2
+    # SSH-reachable hosts backing the control-plane PreprovisionedInventory.
+    hosts:
+      - address: "192.168.1.48"
+      - address: "192.168.1.49"
+      - address: "192.168.1.50"
+
+  workers:
+    # MachineDeployment replica count for the nkp-workload-3-md-0 worker pool.
+    replicas: 4
+    # SSH-reachable hosts backing the worker PreprovisionedInventory.
+    hosts: 
+      - address: "192.168.1.51"
+      - address: "192.168.1.52"
+      - address: "192.168.1.53"
+      - address: "192.168.1.54"
+
+  ssh:
+    user: nutanix
+    # base64-encoded PEM private key for the ssh-key Secret. Do not commit real key
+    # material here - supply via --set-file, -f a secrets values file, or --set.
+    privateKeyBase64: ""
+
+# # MetalLB IPAddressPool/L2Advertisement applied to the workload cluster (templates/metallb.yaml).
+# metallb:
+#   namespace: metallb-system
+#   addressPool:
+#     name: default
+#     addresses:
+#       - 192.168.1.15-192.168.1.18
+#   l2Advertisement:
+#     name: default
+
