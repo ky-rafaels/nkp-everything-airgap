@@ -52,15 +52,6 @@ Cluster API and the Konvoy preprovisioned infrastructure provider installed.
    ```bash
    helm install nkp-workload preprovisioned/nkp-2.17.1 \
      -f my-values.yaml \
-     --set cluster.etcd.encryptionKey=$(head -c 32 /dev/random | base64) \
-     --namespace edge-clusters
-   ```
-
-   To pass the SSH private key without putting it in a values file, use `--set-file`:
-
-   ```bash
-   helm install nkp-workload preprovisioned/nkp-2.17.1 \
-     -f my-values.yaml \
      --namespace edge-clusters \
      --set cluster.etcd.encryptionKey=$(head -c 32 /dev/random | base64) \
      --set-file cluster.ssh.privateKeyBase64=<(base64 < /path/to/id_rsa)
